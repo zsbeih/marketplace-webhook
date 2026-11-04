@@ -103,7 +103,7 @@ eBay allows 5,000 Browse API calls per day. Each query costs one call per run:
 
 ```
 calls/day = total queries × (1440 ÷ poll_minutes)
-          = 34 × 96 ≈ 3,264   (current list, every 15 min)
+          = 32 × 96 ≈ 3,072   (current list, every 15 min)
 ```
 
 Every run prints this number and warns when it passes 90% of the limit. If you add many cards, either merge alternatives into one query with `(a,b)`, or poll less often: change the cron in `poll.yml` **and** `settings.poll_minutes` in `cards.yaml` (e.g. `*/20` and `20`).

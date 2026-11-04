@@ -111,16 +111,6 @@ cards:
     tcgplayer:
       product_ids: [600898]
 
-  # English Black & White full art. Delete this block if you only want the Japanese one.
-  - name: Zekrom - Black & White Full Art 114/114 (EN)
-    ebay:
-      queries:
-        - zekrom 114/114 -celebrations -classic
-        - zekrom full art (black white,bw1,bw base) -celebrations -classic -ex
-      exclude: ["celebrations", "classic collection"]  # 2021 Celebrations reprint uses 114/114 too
-    tcgplayer:
-      product_ids: [90738]
-
   - name: Victini - BW2 Red Collection SR 070/066 (JP)
     ebay:
       queries:
