@@ -2,7 +2,7 @@ name: Poll listings
 
 on:
   schedule:
-    - cron: "*/15 * * * *"   # keep settings.poll_minutes in cards.yaml in sync
+    - cron: "7,22,37,52 * * * *"   # every 15 min, off the busy :00/:15/:30/:45 marks; keep settings.poll_minutes in cards.yaml in sync
   workflow_dispatch:
     inputs:
       test_webhook:

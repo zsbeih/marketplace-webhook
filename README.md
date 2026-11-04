@@ -106,7 +106,7 @@ calls/day = total queries × (1440 ÷ poll_minutes)
           = 32 × 96 ≈ 3,072   (current list, every 15 min)
 ```
 
-Every run prints this number and warns when it passes 90% of the limit. If you add many cards, either merge alternatives into one query with `(a,b)`, or poll less often: change the cron in `poll.yml` **and** `settings.poll_minutes` in `cards.yaml` (e.g. `*/20` and `20`).
+Every run prints this number and warns when it passes 90% of the limit. If you add many cards, either merge alternatives into one query with `(a,b)`, or poll less often: change the cron in `poll.yml` **and** `settings.poll_minutes` in `cards.yaml` (e.g. `7,27,47 * * * *` and `20`). Keep the minutes off :00/:15/:30/:45, since GitHub is busiest then and delays or drops more runs.
 
 ## Troubleshooting
 | Symptom | Fix |
