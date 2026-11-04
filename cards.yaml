@@ -1,0 +1,167 @@
+# Cards to watch. See README.md → "Adding a card".
+#
+# Each card:
+#   name:        unique label shown in Discord (also the key for seen-listing history,
+#                so renaming a card re-seeds it silently on the next run)
+#   ebay:
+#     queries:   list of eBay searches; results are merged and de-duplicated
+#                eBay syntax: space = AND, -word = exclude, (a,b) = a OR b
+#     exclude:   optional; drop listings whose title contains any of these (case-insensitive)
+#     must_include: optional; keep only listings whose title contains at least one of these
+#   tcgplayer:
+#     product_ids: list of TCGplayer product IDs (the number in tcgplayer.com/product/<id>/...)
+
+settings:
+  poll_minutes: 15          # keep in sync with the cron in .github/workflows/poll.yml
+  ebay_daily_call_limit: 5000
+  ebay_category_id: "183454" # CCG Individual Cards
+  ebay_marketplace: EBAY_US
+
+cards:
+  # --- Japanese BW secret rares ---
+  - name: Chandelure - Hail Blizzard SR 057/052 (JP)
+    ebay:
+      queries:
+        - chandelure hail blizzard -014
+        - chandelure 057/052
+      exclude: ["014/052"]
+    tcgplayer:
+      product_ids: [601061]
+
+  - name: Emboar - Hail Blizzard SR 056/052 (JP)
+    ebay:
+      queries:
+        - emboar hail blizzard
+        - emboar 056/052
+    tcgplayer:
+      product_ids: [601070]
+
+  - name: Hydreigon - Psycho Drive SR 057/052 (JP)
+    ebay:
+      queries:
+        - hydreigon psycho drive
+        - hydreigon 057/052
+    tcgplayer:
+      product_ids: [600993]
+
+  - name: Serperior - Dragon Blade SR 054/050 (JP)
+    ebay:
+      queries:
+        - serperior dragon blade
+        - serperior 054/050
+    tcgplayer:
+      product_ids: [601529]
+
+  - name: Reuniclus - Dragon Blast SR 054/050 (JP)
+    ebay:
+      queries:
+        - reuniclus dragon blast
+        - reuniclus 054/050
+    tcgplayer:
+      product_ids: [601473]
+
+  - name: Terrakion - Cold Flare SR 064/059 (JP)
+    ebay:
+      queries:
+        - terrakion cold flare -ex
+        - terrakion 064/059
+    tcgplayer:
+      product_ids: [601657]
+
+  - name: Sigilyph - Spiral Force SR 057/051 (JP)
+    ebay:
+      queries:
+        - sigilyph spiral force
+        - sigilyph 057/051
+    tcgplayer:
+      product_ids: [602243]
+
+  - name: Garbodor - Thunder Knuckle SR 056/051 (JP)
+    ebay:
+      queries:
+        - garbodor thunder knuckle
+        - garbodor 056/051
+    tcgplayer:
+      product_ids: [602300]
+
+  - name: Virizion - Megalo Cannon SR 084/076 (JP)
+    ebay:
+      queries:
+        - virizion megalo cannon -ex
+        - virizion 084/076
+      exclude: ["009/076", "077/076"]  # Virizion EX from the same set
+    tcgplayer:
+      product_ids: [602784]
+
+  - name: Krookodile - Dragon Blade SR 055/050 (JP)
+    ebay:
+      queries:
+        - krookodile dragon blade
+        - krookodile 055/050
+    tcgplayer:
+      product_ids: [601528]
+
+  # --- BW1 / BW2 full arts ---
+  - name: Zekrom - BW1 White Collection SR 055/053 (JP)
+    ebay:
+      queries:
+        - zekrom white collection -020
+        - zekrom 055/053
+      exclude: ["020/053"]
+    tcgplayer:
+      product_ids: [600898]
+
+  # English Black & White full art. Delete this block if you only want the Japanese one.
+  - name: Zekrom - Black & White Full Art 114/114 (EN)
+    ebay:
+      queries:
+        - zekrom 114/114 -celebrations -classic
+        - zekrom full art (black white,bw1,bw base) -celebrations -classic -ex
+      exclude: ["celebrations", "classic collection"]  # 2021 Celebrations reprint uses 114/114 too
+    tcgplayer:
+      product_ids: [90738]
+
+  - name: Victini - BW2 Red Collection SR 070/066 (JP)
+    ebay:
+      queries:
+        - victini red collection -009
+        - victini 070/066
+      exclude: ["009/066"]
+    tcgplayer:
+      product_ids: [600974]
+
+  # --- CP2 Legendary Shine Collection ---
+  - name: Black Kyurem - CP2 Legendary Shine 020/027 (JP)
+    ebay:
+      queries:
+        - black kyurem cp2
+        - black kyurem (legendary shine,020/027)
+    tcgplayer:
+      product_ids: [605329]
+
+  - name: White Kyurem - CP2 Legendary Shine 021/027 (JP)
+    ebay:
+      queries:
+        - white kyurem cp2
+        - white kyurem (legendary shine,021/027)
+    tcgplayer:
+      product_ids: [605352]
+
+  # --- English full art trainers ---
+  - name: Skyla - Boundaries Crossed Full Art 149/149
+    ebay:
+      queries:
+        - skyla 149/149
+        - skyla full art boundaries crossed
+      exclude: ["134/149"]
+    tcgplayer:
+      product_ids: [89287]
+
+  - name: Ghetsis - Plasma Freeze Full Art 115/116
+    ebay:
+      queries:
+        - ghetsis 115/116
+        - ghetsis full art plasma freeze
+      exclude: ["101/116"]
+    tcgplayer:
+      product_ids: [85695]
