@@ -1,6 +1,7 @@
 """eBay Browse API search for newly listed items."""
 
 import base64
+from urllib.parse import quote
 from datetime import datetime
 
 import requests
@@ -10,6 +11,8 @@ from .discord import field
 
 TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
 SEARCH_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
+ITEM_URL = "https://api.ebay.com/buy/browse/v1/item/{item_id}"
+GRADED, UNGRADED = "2750", "4000"  # condition IDs in CCG Individual Cards
 SCOPE = "https://api.ebay.com/oauth/api_scope"
 COLOR = 0xE53238
 
@@ -32,26 +35,56 @@ class EbayClient:
             raise RuntimeError(f"eBay token request failed ({r.status_code}): {r.text[:300]}")
         return r.json()["access_token"]
 
-    def search(self, query: str) -> list[dict]:
+    def _get(self, url: str, params: dict | None = None) -> requests.Response:
         self.calls += 1
-        r = requests.get(
-            SEARCH_URL,
+        return requests.get(
+            url,
             headers={
                 "Authorization": f"Bearer {self._token}",
                 "X-EBAY-C-MARKETPLACE-ID": self.settings.ebay_marketplace,
             },
-            params={
-                "q": query,
-                "category_ids": self.settings.ebay_category_id,
-                "sort": "newlyListed",
-                "limit": 50,
-                "filter": "buyingOptions:{FIXED_PRICE|AUCTION}",
-            },
+            params=params,
             timeout=20,
         )
+
+    def search(self, query: str) -> list[dict]:
+        conditions = f"{GRADED}|{UNGRADED}" if self.settings.ebay_include_graded else UNGRADED
+        r = self._get(SEARCH_URL, {
+            "q": query,
+            "category_ids": self.settings.ebay_category_id,
+            "sort": "newlyListed",
+            "limit": 50,
+            "filter": f"buyingOptions:{{FIXED_PRICE|AUCTION}},conditionIds:{{{conditions}}}",
+        })
         if not r.ok:
             raise RuntimeError(f"eBay search {query!r} failed ({r.status_code}): {r.text[:300]}")
         return r.json().get("itemSummaries", [])
+
+    def card_condition(self, item: dict) -> str | None:
+        """'Near mint or better', 'Lightly played (Excellent)', ... for ungraded cards.
+
+        Search results don't include the card condition, so this costs one getItem call.
+        """
+        descriptors = item.get("conditionDescriptors")
+        if descriptors is None:
+            r = self._get(ITEM_URL.format(item_id=quote(item["itemId"], safe="")))
+            if not r.ok:
+                raise RuntimeError(f"eBay getItem {item['itemId']} failed ({r.status_code}): {r.text[:300]}")
+            descriptors = r.json().get("conditionDescriptors") or []
+        for d in descriptors:
+            if d.get("name", "").lower() == "card condition":
+                return ", ".join(v.get("content", "") for v in d.get("values", [])) or None
+        print(f"    note: no Card Condition on {item.get('itemWebUrl', item['itemId'])} (skipped)", flush=True)
+        return None
+
+    def condition_ok(self, item: dict) -> bool:
+        """Graded cards pass if ebay_include_graded; ungraded ones must match settings.conditions."""
+        if item.get("conditionId") == GRADED:
+            return self.settings.ebay_include_graded
+        if not self.settings.conditions:
+            return True
+        item["_card_condition"] = self.card_condition(item)
+        return self.settings.condition_ok(item["_card_condition"])
 
     def search_card(self, card: Card) -> list[dict]:
         """Run every query for a card, merge, de-duplicate and apply title filters."""
@@ -96,8 +129,9 @@ def embed(item: dict, card: Card) -> dict:
     fields.append(field("Type", "Auction" if is_auction else "Buy It Now"))
     if is_auction and (end := _unix(item.get("itemEndDate"))):
         fields.append(field("Ends", f"<t:{end}:R>"))
-    if item.get("condition"):
-        fields.append(field("Condition", item["condition"]))
+    condition = item.get("_card_condition") or item.get("condition")
+    if condition:
+        fields.append(field("Condition", condition))
 
     seller = item.get("seller") or {}
     if seller.get("username"):

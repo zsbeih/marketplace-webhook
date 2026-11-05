@@ -101,6 +101,55 @@ class EbayTests(unittest.TestCase):
         self.assertTrue(fields["Ends"].startswith("<t:"))
 
 
+class ConditionTests(unittest.TestCase):
+    def client(self, item_response=None, **settings):
+        c = FakeEbay({})
+        c.settings = Settings(**settings)
+        c._get = mock.Mock(return_value=mock.Mock(ok=True, json=lambda: item_response or {}))
+        return c
+
+    def descriptors(self, value):
+        return {"conditionDescriptors": [{"name": "Card Condition", "values": [{"content": value}]}]}
+
+    def test_ungraded_condition_looked_up_and_filtered(self):
+        item = {**ITEM_BIN, "conditionId": "4000"}
+        self.assertTrue(self.client(self.descriptors("Near mint or better")).condition_ok(dict(item)))
+        self.assertTrue(self.client(self.descriptors("Lightly played (Excellent)")).condition_ok(dict(item)))
+        self.assertFalse(self.client(self.descriptors("Moderately played (Very good)")).condition_ok(dict(item)))
+        self.assertFalse(self.client({}).condition_ok(dict(item)))  # unknown condition is skipped
+
+    def test_condition_shown_in_embed(self):
+        item = {**ITEM_BIN, "conditionId": "4000"}
+        self.client(self.descriptors("Near mint or better")).condition_ok(item)
+        fields = {f["name"]: f["value"] for f in ebay.embed(item, CARD)["fields"]}
+        self.assertEqual(fields["Condition"], "Near mint or better")
+
+    def test_graded_toggle(self):
+        item = {**ITEM_AUCTION, "conditionId": "2750"}
+        self.assertTrue(self.client().condition_ok(item))
+        self.assertFalse(self.client(ebay_include_graded=False).condition_ok(item))
+
+    def test_empty_conditions_means_any(self):
+        c = self.client(conditions=[])
+        self.assertTrue(c.condition_ok({**ITEM_BIN, "conditionId": "4000"}))
+        c._get.assert_not_called()
+
+    def test_tcgplayer_conditions(self):
+        s = Settings()
+        self.assertTrue(s.condition_ok("Near Mint"))
+        self.assertTrue(s.condition_ok("Lightly Played"))
+        self.assertFalse(s.condition_ok("Moderately Played"))
+
+    def test_rejected_new_listings_are_still_marked_seen(self):
+        state = State(Path(tempfile.mkdtemp()) / "seen.json")
+        state.reset("ebay", CARD.name)
+        with mock.patch.object(main.discord, "post") as post:
+            main.process("ebay", CARD, [ITEM_BIN], lambda i: i["itemId"], ebay.embed, "url", state,
+                         dry_run=False, keep=lambda i: False)
+            post.assert_not_called()
+        self.assertIn(ITEM_BIN["itemId"], state.seen("ebay", CARD.name))
+
+
 class SeedingTests(unittest.TestCase):
     def test_first_run_seeds_then_only_new_posted(self):
         state = State(Path(tempfile.mkdtemp()) / "seen.json")

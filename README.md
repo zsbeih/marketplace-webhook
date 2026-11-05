@@ -94,6 +94,33 @@ If you named your secrets differently, edit the `env:` block in [`.github/workfl
 - Tick **test_webhook** first, to confirm each channel gets a test message.
 - Then run it normally once. This records the current listings (nothing is posted), and from then on the 15-minute schedule takes over.
 
+### Reliable 15-minute runs (cron-job.org)
+GitHub's own scheduler is unreliable on free repos and sometimes waits hours between runs. So a free external timer starts the workflow every 15 minutes, and the GitHub schedule in `poll.yml` is only an hourly backup.
+
+**1. Create a GitHub token that can only start this workflow**
+- GitHub → profile picture → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**
+- Name: `cron-job marketplace-webhook`, Expiration: 1 year (set a reminder to renew it)
+- Repository access: **Only select repositories** → `marketplace-webhook`
+- Permissions → Repository permissions → **Actions: Read and write** (leave everything else at No access)
+- Generate, then copy the token (it starts with `github_pat_`)
+
+**2. Create the cron job**
+- Sign up at <https://cron-job.org> (free) → **Create cronjob**
+- Title: `marketplace-webhook`
+- URL: `https://api.github.com/repos/zsbeih/marketplace-webhook/actions/workflows/poll.yml/dispatches`
+- Schedule: **Custom** → minutes `7,22,37,52`, every hour, every day
+- **Advanced** tab:
+  - Request method: **POST**
+  - Headers:
+    - `Authorization`: `Bearer github_pat_…` (your token)
+    - `Accept`: `application/vnd.github+json`
+    - `X-GitHub-Api-Version`: `2022-11-28`
+    - `Content-Type`: `application/json`
+  - Request body: `{"ref":"main"}`
+- Save, then click **Test run**. A `204 No Content` response means it worked, and a new run shows up in the Actions tab.
+
+Turn on cron-job.org's failure notifications so you hear about it if the token expires (a `401` response).
+
 ### Posting everything that's listed right now
 To get every current listing in Discord once (a backlog), go to **Actions → Poll listings → Run workflow** and set **post_current** to `both`, `ebay` or `tcgplayer`. Runs after that go back to posting only new listings. This works for a single card locally too: `python -m tracker.main --post-current --card skyla`. Expect a burst of messages, since some cards have 50+ listings.
 
@@ -102,14 +129,23 @@ Each run commits `state/seen.json` (the IDs already alerted on) back to the repo
 ---
 
 ## eBay call budget
-eBay allows 5,000 Browse API calls per day. Each query costs one call per run:
+eBay allows 5,000 Browse API calls per day. Each search query costs one call per run, and each **new** ungraded listing costs one more call to read its card condition (search results don't include it):
 
 ```
-calls/day = total queries × (1440 ÷ poll_minutes)
-          = 32 × 96 ≈ 3,072   (current list, every 15 min)
+search calls/day ≈ total queries × runs/day
+                 = 32 × (96 cron-job.org + 24 GitHub backup) ≈ 3,840
+condition lookups: a few per run (new listings only); about 600 once if you use post_current
 ```
 
-Every run prints this number and warns when it passes 90% of the limit. If you add many cards, either merge alternatives into one query with `(a,b)`, or poll less often: change the cron in `poll.yml` **and** `settings.poll_minutes` in `cards.yaml` (e.g. `7,27,47 * * * *` and `20`). Keep the minutes off :00/:15/:30/:45, since GitHub is busiest then and delays or drops more runs.
+Every run prints the number of calls it made, and warns when the estimate passes 90% of the limit. If you add many cards, merge alternatives into one query with `(a,b)`, or run less often: change the cron-job.org schedule **and** `settings.poll_minutes` in `cards.yaml` (e.g. minutes `7,27,47` and `20`). Keep the minutes off :00/:15/:30/:45, since those are the busiest times.
+
+## Condition filter
+`settings.conditions` in `cards.yaml` applies to both marketplaces (default: Near Mint and Lightly Played):
+- **TCGplayer:** matched against each listing's condition.
+- **eBay, ungraded:** matched against the listing's *Card Condition* ("Near mint or better", "Lightly played (Excellent)", ...). Listings with no card condition are skipped and noted in the log.
+- **eBay, graded slabs** have a grade, not a condition. They're included while `ebay_include_graded: true`.
+
+Listings that don't match are still recorded as seen, so they're only checked once.
 
 ## Troubleshooting
 | Symptom | Fix |
@@ -117,7 +153,7 @@ Every run prints this number and warns when it passes 90% of the limit. If you a
 | `webhook rejected (401/404)` | The webhook was deleted or the secret is wrong. Make a new one and update the secret. |
 | `eBay token request failed` | Check `EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET`. Use the **Production** keys, not Sandbox. |
 | "TCGplayer lookups have failed 3 runs in a row" in Discord | TCGplayer probably changed their site. The endpoint is unofficial, so it may need a code update in `tracker/tcgplayer.py`. |
-| Runs are late or skipped | GitHub delays scheduled workflows by 5–15 min at busy times, which is normal. GitHub also pauses schedules after 60 days without repo activity; the state commits normally prevent that, and re-enabling it in the Actions tab fixes it. |
+| Runs are late or skipped | Check the cron-job.org history. A `401` means the GitHub token expired, so make a new one and update the header. A `404` means the URL is wrong or the token can't see the repo. |
 | A card went quiet for one run after editing it | Its `name` changed. History is stored by name, so a renamed card counts as new and silently re-seeds on its next run. |
 
 ## Layout

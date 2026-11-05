@@ -16,6 +16,12 @@ settings:
   ebay_daily_call_limit: 5000
   ebay_category_id: "183454" # CCG Individual Cards
   ebay_marketplace: EBAY_US
+  # Only alert on these conditions, for both eBay and TCGplayer. Remove a line to drop it,
+  # or set to [] for any condition. Matching is by text, so "Near Mint" also matches eBay's "Near mint or better".
+  conditions:
+    - Near Mint
+    - Lightly Played
+  ebay_include_graded: true  # graded slabs (PSA/BGS/CGC...) have no NM/LP label; false = skip them
 
 cards:
   # --- Japanese BW secret rares ---

@@ -26,7 +26,9 @@ def log(msg: str) -> None:
 
 
 def process(source: str, card: Card, listings: list, id_of, embed_of, webhook: str | None,
-            state: State, dry_run: bool) -> None:
+            state: State, dry_run: bool, keep=None) -> None:
+    """Post listings not seen before. `keep(listing)` filters new listings (e.g. by condition);
+    listings it rejects are still recorded as seen so they're only checked once."""
     ids = [id_of(x) for x in listings]
     seeded = state.is_seeded(source, card.name)
     seen = state.seen(source, card.name)
@@ -37,8 +39,9 @@ def process(source: str, card: Card, listings: list, id_of, embed_of, webhook: s
         log(f"  [{source}] {card.name}: {len(listings)} results, {len(new) if seeded else 0} new"
             + ("" if seeded else " (not seeded yet: first real run records these silently)"))
         for x in listings[:DRY_RUN_SHOW]:
+            skip = keep is not None and not keep(x)
             e = embed_of(x, card)
-            mark = "NEW " if seeded and id_of(x) in new_ids else "    "
+            mark = "SKIP " if skip else "NEW  " if seeded and id_of(x) in new_ids else "     "
             details = ", ".join(f["value"] for f in e["fields"][:3])
             log(f"    {mark}{e['title'][:80]}  [{details}]  {e['url']}")
         if len(listings) > DRY_RUN_SHOW:
@@ -50,6 +53,11 @@ def process(source: str, card: Card, listings: list, id_of, embed_of, webhook: s
         state.add(source, card.name, ids)
         return
 
+    if keep is not None and new:
+        before = len(new)
+        new = [x for x in new if keep(x)]
+        if before != len(new):
+            log(f"  [{source}] {card.name}: skipped {before - len(new)} new (condition)")
     if new:
         # oldest first so the newest ends up at the bottom of the channel
         new.reverse()
@@ -77,20 +85,24 @@ def run_ebay(cards: list[Card], settings: Settings, state: State, dry_run: bool)
         log("  WARNING: close to or over the eBay daily limit. See README → 'eBay call budget'.")
 
     client = ebay.EbayClient(cid, secret, settings)
+    log(f"  conditions: {', '.join(settings.conditions) or 'any'}"
+        f"{' + graded' if settings.ebay_include_graded else ' (graded excluded)'}")
     ok = True
     for card in cards:
         try:
             items = client.search_card(card)
-            process("ebay", card, items, lambda i: i["itemId"], ebay.embed, webhook, state, dry_run)
+            process("ebay", card, items, lambda i: i["itemId"], ebay.embed, webhook, state, dry_run,
+                    keep=client.condition_ok)
         except Exception as e:  # keep going with the other cards
             ok = False
             log(f"  [ebay] {card.name}: ERROR {e}")
         if not dry_run:
             state.save()
+    log(f"  eBay calls this run: {client.calls}")
     return ok
 
 
-def run_tcgplayer(cards: list[Card], state: State, dry_run: bool) -> bool:
+def run_tcgplayer(cards: list[Card], settings: Settings, state: State, dry_run: bool) -> bool:
     webhook = os.getenv("DISCORD_WEBHOOK_TCGPLAYER")
     cards = [c for c in cards if c.tcgplayer_product_ids]
     if not webhook and not dry_run:
@@ -102,7 +114,8 @@ def run_tcgplayer(cards: list[Card], state: State, dry_run: bool) -> bool:
     for card in cards:
         try:
             listings = tcgplayer.fetch_card(card)
-            process("tcgplayer", card, listings, tcgplayer.listing_id, tcgplayer.embed, webhook, state, dry_run)
+            process("tcgplayer", card, listings, tcgplayer.listing_id, tcgplayer.embed, webhook, state, dry_run,
+                    keep=lambda l: settings.condition_ok(l.get("condition")))
         except Exception as e:
             failures += 1
             log(f"  [tcgplayer] {card.name}: ERROR {e}")
@@ -177,7 +190,7 @@ def main() -> int:
     if args.source in (None, "ebay"):
         ok &= run_ebay(cards, settings, state, args.dry_run)
     if args.source in (None, "tcgplayer"):
-        ok &= run_tcgplayer(cards, state, args.dry_run)
+        ok &= run_tcgplayer(cards, settings, state, args.dry_run)
     return 0 if ok else 1
 
 

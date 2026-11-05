@@ -2,7 +2,9 @@ name: Poll listings
 
 on:
   schedule:
-    - cron: "7,22,37,52 * * * *"   # every 15 min, off the busy :00/:15/:30/:45 marks; keep settings.poll_minutes in cards.yaml in sync
+    # Backup only. GitHub runs schedules unreliably (sometimes hours apart), so the real
+    # every-15-min trigger is cron-job.org calling workflow_dispatch; see README → "Reliable 15-minute runs".
+    - cron: "41 * * * *"
   workflow_dispatch:
     inputs:
       test_webhook:

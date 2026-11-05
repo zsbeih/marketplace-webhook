@@ -36,6 +36,15 @@ class Settings:
     ebay_daily_call_limit: int = 5000
     ebay_category_id: str = "183454"
     ebay_marketplace: str = "EBAY_US"
+    # Only alert on these conditions (case-insensitive substring match). Empty list = any condition.
+    conditions: list[str] = field(default_factory=lambda: ["Near Mint", "Lightly Played"])
+    ebay_include_graded: bool = True
+
+    def condition_ok(self, condition: str | None) -> bool:
+        if not self.conditions:
+            return True
+        c = (condition or "").lower()
+        return any(want.lower() in c for want in self.conditions)
 
 
 def _str_list(value, where: str) -> list[str]:
@@ -54,7 +63,11 @@ def load(path: Path = CARDS_FILE) -> tuple[Settings, list[Card]]:
     except yaml.YAMLError as e:
         raise ConfigError(f"{path.name} is not valid YAML: {e}") from e
 
-    settings = Settings(**(raw.get("settings") or {}))
+    try:
+        settings = Settings(**(raw.get("settings") or {}))
+    except TypeError as e:
+        raise ConfigError(f"settings: {e}") from e
+    settings.conditions = _str_list(settings.conditions, "settings.conditions")
 
     cards: list[Card] = []
     seen_names: set[str] = set()
