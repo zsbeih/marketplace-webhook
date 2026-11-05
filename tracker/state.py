@@ -32,6 +32,10 @@ class State:
         existing.extend(i for i in ids if i not in known)
         del existing[:-MAX_IDS_PER_CARD]
 
+    def reset(self, source: str, card: str) -> None:
+        """Mark a card as seeded with nothing seen, so all its current listings post."""
+        self._bucket(source)[card] = []
+
     def get_counter(self, key: str) -> int:
         return int(self.data.get("counters", {}).get(key, 0))
 

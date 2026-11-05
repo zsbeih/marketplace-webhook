@@ -5,6 +5,7 @@
     python -m tracker.main --card zekrom      # only cards whose name contains "zekrom"
     python -m tracker.main --source tcgplayer # only one marketplace
     python -m tracker.main --test-webhook     # send one test message to each configured webhook
+    python -m tracker.main --post-current     # post every current listing once, then only new ones
 """
 
 import argparse
@@ -147,6 +148,8 @@ def main() -> int:
     p.add_argument("--card", help="only cards whose name contains this text (case-insensitive)")
     p.add_argument("--source", choices=["ebay", "tcgplayer"], help="only this marketplace")
     p.add_argument("--test-webhook", action="store_true", help="send a test message to each webhook")
+    p.add_argument("--post-current", action="store_true",
+                   help="forget seen listings for the selected cards, so every current listing posts once")
     args = p.parse_args()
 
     if args.test_webhook:
@@ -164,6 +167,12 @@ def main() -> int:
             return 2
 
     state = State()
+    if args.post_current and not args.dry_run:
+        for source in ("ebay", "tcgplayer"):
+            if args.source in (None, source):
+                for card in cards:
+                    state.reset(source, card.name)
+        log("post-current: every current listing for the selected cards will be posted")
     ok = True
     if args.source in (None, "ebay"):
         ok &= run_ebay(cards, settings, state, args.dry_run)

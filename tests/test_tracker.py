@@ -114,6 +114,17 @@ class SeedingTests(unittest.TestCase):
             main.process("ebay", CARD, [ITEM_AUCTION, ITEM_BIN], id_of, ebay.embed, "url", state, dry_run=False)
             post.assert_called_once()
 
+    def test_reset_posts_everything_once(self):
+        state = State(Path(tempfile.mkdtemp()) / "seen.json")
+        id_of = lambda i: i["itemId"]
+        state.add("ebay", CARD.name, [id_of(ITEM_BIN), id_of(ITEM_AUCTION)])
+        state.reset("ebay", CARD.name)
+        with mock.patch.object(main.discord, "post") as post:
+            main.process("ebay", CARD, [ITEM_AUCTION, ITEM_BIN], id_of, ebay.embed, "url", state, dry_run=False)
+            self.assertEqual(len(post.call_args.args[1]), 2)
+            main.process("ebay", CARD, [ITEM_AUCTION, ITEM_BIN], id_of, ebay.embed, "url", state, dry_run=False)
+            post.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

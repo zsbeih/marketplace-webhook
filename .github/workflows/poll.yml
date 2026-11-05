@@ -9,6 +9,11 @@ on:
         description: "Only send a test message to each Discord webhook"
         type: boolean
         default: false
+      post_current:
+        description: "Post every current listing once (then only new ones)"
+        type: choice
+        options: ["no", "both", "ebay", "tcgplayer"]
+        default: "no"
 
 permissions:
   contents: write
@@ -41,6 +46,10 @@ jobs:
         run: |
           if [ "${{ inputs.test_webhook }}" = "true" ]; then
             python -m tracker.main --test-webhook
+          elif [ "${{ inputs.post_current }}" = "both" ]; then
+            python -m tracker.main --post-current
+          elif [ -n "${{ inputs.post_current }}" ] && [ "${{ inputs.post_current }}" != "no" ]; then
+            python -m tracker.main --post-current --source "${{ inputs.post_current }}"
           else
             python -m tracker.main
           fi

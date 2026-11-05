@@ -94,6 +94,9 @@ If you named your secrets differently, edit the `env:` block in [`.github/workfl
 - Tick **test_webhook** first, to confirm each channel gets a test message.
 - Then run it normally once. This records the current listings (nothing is posted), and from then on the 15-minute schedule takes over.
 
+### Posting everything that's listed right now
+To get every current listing in Discord once (a backlog), go to **Actions → Poll listings → Run workflow** and set **post_current** to `both`, `ebay` or `tcgplayer`. Runs after that go back to posting only new listings. This works for a single card locally too: `python -m tracker.main --post-current --card skyla`. Expect a burst of messages, since some cards have 50+ listings.
+
 Each run commits `state/seen.json` (the IDs already alerted on) back to the repo, so commits titled "Update seen listings" are expected.
 
 ---
@@ -120,7 +123,7 @@ Every run prints this number and warns when it passes 90% of the limit. If you a
 ## Layout
 ```
 cards.yaml               cards to watch + settings
-tracker/main.py          entry point: python -m tracker.main [--dry-run] [--card X] [--source ebay|tcgplayer] [--test-webhook]
+tracker/main.py          entry point: python -m tracker.main [--dry-run] [--card X] [--source ebay|tcgplayer] [--test-webhook] [--post-current]
 tracker/ebay.py          eBay Browse API search + Discord embed
 tracker/tcgplayer.py     TCGplayer listings + Discord embed
 tracker/discord.py       webhook posting (batching, rate limits)
