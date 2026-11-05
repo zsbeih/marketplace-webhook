@@ -43,6 +43,19 @@ def _post(url: str, body: dict, attempts: int = 3) -> dict:
     return r.json()
 
 
+def _listings_page(product_id: int, body: dict, attempts: int = 3) -> dict:
+    """One page of listings. TCGplayer sometimes answers 200 with an empty "results" array;
+    retry that like a 5xx instead of failing the card."""
+    for attempt in range(1, attempts + 1):
+        results = _post(LISTINGS_URL.format(product_id=product_id), body).get("results") or []
+        if results and isinstance(results[0], dict) and "results" in results[0]:
+            return results[0]
+        if attempt == attempts:
+            raise RuntimeError(f"TCGplayer product {product_id}: malformed listings response "
+                               f"after {attempts} attempts")
+        time.sleep(2 * attempt)
+
+
 def fetch_listings(product_id: int) -> list[dict]:
     listings: list[dict] = []
     for page in range(MAX_PAGES):
@@ -58,7 +71,7 @@ def fetch_listings(product_id: int) -> list[dict]:
             "context": {"shippingCountry": "US", "cart": {}},
             "aggregations": ["listingType"],
         }
-        result = _post(LISTINGS_URL.format(product_id=product_id), body)["results"][0]
+        result = _listings_page(product_id, body)
         listings.extend(result["results"])
         if len(listings) >= result.get("totalResults", 0) or not result["results"]:
             break

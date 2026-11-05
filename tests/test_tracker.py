@@ -181,5 +181,50 @@ class SeedingTests(unittest.TestCase):
             post.assert_called_once()
 
 
+class CardFilterTest(unittest.TestCase):
+    def card(self, name):
+        return next(c for c in load()[1] if c.name.startswith(name))
+
+    def test_wrong_printings_are_excluded(self):
+        cases = {
+            "Victini": ["Pokemon Victini V CS3.5C 070/066 Simplified Chinese", "Victini V cs3,5c 070/066",
+                        "Victini 070/066 Chinese", "Pokemon card Victini V"],
+            "White Kyurem": ["White Kyurem 021/027 CP2 Korean"],
+            "Terrakion": ["Terrakion Cold Flare #155 Japanese"],
+            "Chandelure": ["Chandelure Hail Blizzard 018/052 Japanese"],
+        }
+        for name, titles in cases.items():
+            for title in titles:
+                self.assertFalse(self.card(name).title_ok(title), title)
+
+    def test_real_cards_still_pass(self):
+        self.assertTrue(self.card("Victini").title_ok("Victini 070/066 SR Red Collection Japanese V-create"))
+        self.assertTrue(self.card("White Kyurem").title_ok("White Kyurem 021/027 CP2 Legendary Shine"))
+        self.assertTrue(self.card("Terrakion").title_ok("Terrakion 064/059 SR Cold Flare"))
+        self.assertTrue(self.card("Chandelure").title_ok("Chandelure 057/052 Hail Blizzard SR"))
+
+    def test_removed_cards(self):
+        names = " ".join(c.name for c in load()[1]).lower()
+        for gone in ("zekrom", "reshiram", "ghetsis"):
+            self.assertNotIn(gone, names)
+
+
+class TcgplayerRetryTest(unittest.TestCase):
+    def test_empty_results_is_retried(self):
+        from tracker import tcgplayer
+        good = {"results": [{"results": [{"listingId": 1.0}], "totalResults": 1}]}
+        with mock.patch.object(tcgplayer, "_post", side_effect=[{"results": []}, good]) as post, \
+                mock.patch.object(tcgplayer.time, "sleep"):
+            self.assertEqual(tcgplayer.fetch_listings(602243), [{"listingId": 1.0}])
+        self.assertEqual(post.call_count, 2)
+
+    def test_persistent_empty_results_raises_clear_error(self):
+        from tracker import tcgplayer
+        with mock.patch.object(tcgplayer, "_post", return_value={"results": []}), \
+                mock.patch.object(tcgplayer.time, "sleep"):
+            with self.assertRaisesRegex(RuntimeError, "malformed"):
+                tcgplayer.fetch_listings(602243)
+
+
 if __name__ == "__main__":
     unittest.main()
