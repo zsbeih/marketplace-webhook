@@ -13,6 +13,15 @@ TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
 SEARCH_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
 ITEM_URL = "https://api.ebay.com/buy/browse/v1/item/{item_id}"
 GRADED, UNGRADED = "2750", "4000"  # condition IDs in CCG Individual Cards
+# Ungraded "Card Condition" descriptor and its value IDs for CCG Individual Cards (183454), in case
+# eBay returns IDs instead of names. See eBay's "condition descriptor IDs for trading cards" page.
+CARD_CONDITION = "40001"
+CARD_CONDITION_NAMES = {
+    "400010": "Near Mint or Better",
+    "400015": "Lightly Played (Excellent)",
+    "400016": "Moderately Played (Very Good)",
+    "400017": "Heavily Played (Poor)",
+}
 SCOPE = "https://api.ebay.com/oauth/api_scope"
 COLOR = 0xE53238
 
@@ -72,8 +81,9 @@ class EbayClient:
                 raise RuntimeError(f"eBay getItem {item['itemId']} failed ({r.status_code}): {r.text[:300]}")
             descriptors = r.json().get("conditionDescriptors") or []
         for d in descriptors:
-            if d.get("name", "").lower() == "card condition":
-                return ", ".join(v.get("content", "") for v in d.get("values", [])) or None
+            if d.get("name", "").lower() in ("card condition", CARD_CONDITION):
+                values = [CARD_CONDITION_NAMES.get(v.get("content", ""), v.get("content", "")) for v in d.get("values", [])]
+                return ", ".join(values) or None
         print(f"    note: no Card Condition on {item.get('itemWebUrl', item['itemId'])} (skipped)", flush=True)
         return None
 

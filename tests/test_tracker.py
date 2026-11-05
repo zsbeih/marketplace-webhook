@@ -118,6 +118,12 @@ class ConditionTests(unittest.TestCase):
         self.assertFalse(self.client(self.descriptors("Moderately played (Very good)")).condition_ok(dict(item)))
         self.assertFalse(self.client({}).condition_ok(dict(item)))  # unknown condition is skipped
 
+    def test_condition_ids_understood(self):
+        item = {**ITEM_BIN, "conditionId": "4000"}
+        ids = {"conditionDescriptors": [{"name": "40001", "values": [{"content": "400015"}]}]}
+        self.assertTrue(self.client(ids).condition_ok(item))
+        self.assertEqual(item["_card_condition"], "Lightly Played (Excellent)")
+
     def test_condition_shown_in_embed(self):
         item = {**ITEM_BIN, "conditionId": "4000"}
         self.client(self.descriptors("Near mint or better")).condition_ok(item)
