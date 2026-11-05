@@ -22,7 +22,7 @@ class Card:
     tcgplayer_product_ids: list[int] = field(default_factory=list)
 
     def title_ok(self, title: str) -> bool:
-        t = title.lower()
+        t = f" {title.lower()} "  # padded so an exclude like "victini v " also matches at the end
         if any(word.lower() in t for word in self.ebay_exclude):
             return False
         if self.ebay_must_include and not any(w.lower() in t for w in self.ebay_must_include):

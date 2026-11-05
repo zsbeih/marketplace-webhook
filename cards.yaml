@@ -30,7 +30,7 @@ cards:
       queries:
         - chandelure hail blizzard -014
         - chandelure 057/052
-      exclude: ["014/052"]
+      exclude: ["014/052", "018"]  # 018/052 is a different Hail Blizzard card
     tcgplayer:
       product_ids: [601061]
 
@@ -71,6 +71,7 @@ cards:
       queries:
         - terrakion cold flare -ex
         - terrakion 064/059
+      exclude: ["155"]  # Cold Flare #155 listings that aren't this card
     tcgplayer:
       product_ids: [601657]
 
@@ -107,22 +108,14 @@ cards:
     tcgplayer:
       product_ids: [601528]
 
-  # --- BW1 / BW2 full arts ---
-  - name: Zekrom - BW1 White Collection SR 055/053 (JP)
-    ebay:
-      queries:
-        - zekrom white collection -020
-        - zekrom 055/053
-      exclude: ["020/053"]
-    tcgplayer:
-      product_ids: [600898]
-
+  # --- BW2 full arts ---
   - name: Victini - BW2 Red Collection SR 070/066 (JP)
     ebay:
       queries:
         - victini red collection -009
         - victini 070/066
-      exclude: ["009/066"]
+      # Simplified Chinese Victini V from CS3.5C also uses 070/066
+      exclude: ["009/066", "chinese", "cs3.5", "cs3,5", "cs 3.5", "victini v "]
     tcgplayer:
       product_ids: [600974]
 
@@ -132,6 +125,7 @@ cards:
       queries:
         - black kyurem cp2
         - black kyurem (legendary shine,020/027)
+      exclude: ["korean"]
     tcgplayer:
       product_ids: [605329]
 
@@ -140,6 +134,7 @@ cards:
       queries:
         - white kyurem cp2
         - white kyurem (legendary shine,021/027)
+      exclude: ["korean"]
     tcgplayer:
       product_ids: [605352]
 
@@ -152,12 +147,3 @@ cards:
       exclude: ["134/149"]
     tcgplayer:
       product_ids: [89287]
-
-  - name: Ghetsis - Plasma Freeze Full Art 115/116
-    ebay:
-      queries:
-        - ghetsis 115/116
-        - ghetsis full art plasma freeze
-      exclude: ["101/116"]
-    tcgplayer:
-      product_ids: [85695]
