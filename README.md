@@ -1,6 +1,6 @@
 # Marketplace Webhook
 
-Watches eBay and TCGplayer for new listings of specific Pokémon cards and posts each one to Discord, one channel per marketplace. It runs every 15 minutes on GitHub Actions, so nothing has to run on your computer.
+Watches eBay and TCGplayer for new listings of specific Pokémon cards and posts each one to Discord, one channel per marketplace. It runs every 30 minutes on GitHub Actions, so nothing has to run on your computer.
 
 - **eBay:** new Buy It Now and auction listings, via the official Browse API.
 - **TCGplayer:** new seller listings on each card's product page, via the endpoint tcgplayer.com itself uses.
@@ -92,10 +92,10 @@ If you named your secrets differently, edit the `env:` block in [`.github/workfl
 ### 4. Turn it on
 **Actions** tab → *Poll listings* → **Run workflow**:
 - Tick **test_webhook** first, to confirm each channel gets a test message.
-- Then run it normally once. This records the current listings (nothing is posted), and from then on the 15-minute schedule takes over.
+- Then run it normally once. This records the current listings (nothing is posted), and from then on the 30-minute schedule takes over.
 
-### Reliable 15-minute runs (cron-job.org)
-GitHub's own scheduler is unreliable on free repos and sometimes waits hours between runs. So a free external timer starts the workflow every 15 minutes, and the GitHub schedule in `poll.yml` is only an hourly backup.
+### Reliable 30-minute runs (cron-job.org)
+GitHub's own scheduler is unreliable on free repos and sometimes waits hours between runs. So a free external timer starts the workflow every 30 minutes, and the GitHub schedule in `poll.yml` is only an hourly backup.
 
 **1. Create a GitHub token that can only start this workflow**
 - GitHub → profile picture → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**
@@ -108,7 +108,7 @@ GitHub's own scheduler is unreliable on free repos and sometimes waits hours bet
 - Sign up at <https://cron-job.org> (free) → **Create cronjob**
 - Title: `marketplace-webhook`
 - URL: `https://api.github.com/repos/zsbeih/marketplace-webhook/actions/workflows/poll.yml/dispatches`
-- Schedule: **Custom** → minutes `7,22,37,52`, every hour, every day
+- Schedule: **Custom** → minutes `7,37`, every hour, every day
 - **Advanced** tab:
   - Request method: **POST**
   - Headers:
@@ -133,11 +133,11 @@ eBay allows 5,000 Browse API calls per day. Each search query costs one call per
 
 ```
 search calls/day ≈ total queries × runs/day
-                 = 32 × (96 cron-job.org + 24 GitHub backup) ≈ 3,840
+                 = 28 × (48 cron-job.org + 24 GitHub backup) ≈ 2,016
 condition lookups: a few per run (new listings only); about 600 once if you use post_current
 ```
 
-Every run prints the number of calls it made, and warns when the estimate passes 90% of the limit. If you add many cards, merge alternatives into one query with `(a,b)`, or run less often: change the cron-job.org schedule **and** `settings.poll_minutes` in `cards.yaml` (e.g. minutes `7,27,47` and `20`). Keep the minutes off :00/:15/:30/:45, since those are the busiest times.
+Every run prints the number of calls it made, and warns when the estimate passes 90% of the limit. If you add many cards, merge alternatives into one query with `(a,b)`, or run less often: change the cron-job.org schedule **and** `settings.poll_minutes` in `cards.yaml` (e.g. minute `7` and `60` for hourly). Keep the minutes off :00/:15/:30/:45, since those are the busiest times.
 
 ## Condition filter
 `settings.conditions` in `cards.yaml` applies to both marketplaces (default: Near Mint and Lightly Played):

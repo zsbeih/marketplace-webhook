@@ -1,6 +1,7 @@
 """eBay Browse API search for newly listed items."""
 
 import base64
+import time
 from urllib.parse import quote
 from datetime import datetime
 
@@ -44,17 +45,28 @@ class EbayClient:
             raise RuntimeError(f"eBay token request failed ({r.status_code}): {r.text[:300]}")
         return r.json()["access_token"]
 
-    def _get(self, url: str, params: dict | None = None) -> requests.Response:
-        self.calls += 1
-        return requests.get(
-            url,
-            headers={
-                "Authorization": f"Bearer {self._token}",
-                "X-EBAY-C-MARKETPLACE-ID": self.settings.ebay_marketplace,
-            },
-            params=params,
-            timeout=20,
-        )
+    def _get(self, url: str, params: dict | None = None, attempts: int = 3) -> requests.Response:
+        """GET with retries; eBay's API occasionally times out or returns a 5xx."""
+        for attempt in range(1, attempts + 1):
+            self.calls += 1
+            try:
+                r = requests.get(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {self._token}",
+                        "X-EBAY-C-MARKETPLACE-ID": self.settings.ebay_marketplace,
+                    },
+                    params=params,
+                    timeout=20,
+                )
+                if r.status_code < 500:
+                    return r
+                error = f"HTTP {r.status_code}"
+            except requests.RequestException as e:
+                error = type(e).__name__
+            if attempt == attempts:
+                raise RuntimeError(f"eBay request failed after {attempts} attempts ({error})")
+            time.sleep(2 * attempt)
 
     def search(self, query: str) -> list[dict]:
         conditions = f"{GRADED}|{UNGRADED}" if self.settings.ebay_include_graded else UNGRADED
