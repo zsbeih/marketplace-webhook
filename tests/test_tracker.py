@@ -226,5 +226,33 @@ class TcgplayerRetryTest(unittest.TestCase):
                 tcgplayer.fetch_listings(602243)
 
 
+class EbayRetryTest(unittest.TestCase):
+    def client(self):
+        c = FakeEbay({})
+        c._token = "t"
+        return c
+
+    def test_timeout_is_retried(self):
+        import requests
+        ok = mock.Mock(status_code=200)
+        with mock.patch.object(ebay.requests, "get", side_effect=[requests.ReadTimeout(), ok]) as get, \
+                mock.patch.object(ebay.time, "sleep"):
+            self.assertIs(self.client()._get("https://x"), ok)
+        self.assertEqual(get.call_count, 2)
+
+    def test_persistent_failure_raises(self):
+        import requests
+        with mock.patch.object(ebay.requests, "get", side_effect=requests.ReadTimeout()), \
+                mock.patch.object(ebay.time, "sleep"):
+            with self.assertRaisesRegex(RuntimeError, "after 3 attempts"):
+                self.client()._get("https://x")
+
+    def test_4xx_not_retried(self):
+        bad = mock.Mock(status_code=400)
+        with mock.patch.object(ebay.requests, "get", return_value=bad) as get:
+            self.assertIs(self.client()._get("https://x"), bad)
+        get.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()

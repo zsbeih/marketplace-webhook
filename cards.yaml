@@ -12,7 +12,7 @@
 #     product_ids: list of TCGplayer product IDs (the number in tcgplayer.com/product/<id>/...)
 
 settings:
-  poll_minutes: 15          # keep in sync with the cron in .github/workflows/poll.yml
+  poll_minutes: 30          # keep in sync with the cron-job.org schedule (README → "Reliable 30-minute runs")
   ebay_daily_call_limit: 5000
   ebay_category_id: "183454" # CCG Individual Cards
   ebay_marketplace: EBAY_US
